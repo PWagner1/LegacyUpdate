@@ -79,7 +79,7 @@ PLUGIN_METHOD(VerifyFileHash) {
 
 	WCHAR calculatedHashHex[SIZE_OF_SHA_256_HASH * 2 + 1];
 	for (int i = 0; i < SIZE_OF_SHA_256_HASH; i++) {
-		wsprintf(&calculatedHashHex[i * 2], L"%02x", calculatedHash[i]);
+		StringCchPrintf(&calculatedHashHex[i * 2], 3, L"%02x", calculatedHash[i]);
 	}
 	pushstring(calculatedHashHex);
 
