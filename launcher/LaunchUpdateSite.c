@@ -150,8 +150,8 @@ void LaunchUpdateSite(int argc, LPWSTR *argv, int nCmdShow) {
 	siteURL = GetUpdateSiteURL();
 
 	// Is this a first run launch? Append first run flag if so.
+	WCHAR newSiteURL[256];
 	if (argc > 0 && lstrcmpi(argv[0], L"/firstrun") == 0) {
-		WCHAR newSiteURL[256];
 		StringCchPrintf(newSiteURL, ARRAYSIZE(newSiteURL), L"%ls%ls", siteURL, UpdateSiteFirstRunFlag);
 		siteURL = newSiteURL;
 	}

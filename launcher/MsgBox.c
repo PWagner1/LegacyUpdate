@@ -39,7 +39,7 @@ int MsgBox(HWND hwnd, LPCTSTR instruction, LPCTSTR body, UINT type) {
 		params.lpszIcon = MAKEINTRESOURCE(IDI_APPICON);
 		int result = MessageBoxIndirect(&params);
 
-		if (finalBody != body) {
+		if (finalBody != (LPWSTR)instruction) {
 			LocalFree(finalBody);
 		}
 

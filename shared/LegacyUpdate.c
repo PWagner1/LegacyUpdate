@@ -26,6 +26,8 @@ EXTERN_C HRESULT GetInstallPath(LPWSTR *path) {
 		}
 	}
 
-	lstrcpyn(*path, _installPath, MAX_PATH);
+	if (_installPath) {
+		lstrcpyn(*path, _installPath, MAX_PATH);
+	}
 	return hr;
 }

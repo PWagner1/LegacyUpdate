@@ -48,7 +48,8 @@ EXTERN_C LPWSTR GetMessageForHresult(HRESULT hr) {
 	if (len > 1 && message[0] == '{') {
 		LPWSTR closeBrace = wcsstr(message, L"}\r\n");
 		if (closeBrace) {
-			message = closeBrace + 3;
+			LPWSTR src = closeBrace + 3;
+			MoveMemory(message, src, (lstrlen(src) + 1) * sizeof(WCHAR));
 		}
 	}
 

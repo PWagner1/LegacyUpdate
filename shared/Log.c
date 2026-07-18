@@ -41,11 +41,12 @@ void LogInternal(LPCWSTR text) {
 	GetLocalTime(&time);
 
 	WCHAR line[LOG_LINE_MAXLEN + 39];
-	int length = StringCchPrintf(line, ARRAYSIZE(line), L"%04d-%02d-%02d %02d:%02d:%02d\t%ls[%d]\t%ls\r\n",
+	StringCchPrintf(line, ARRAYSIZE(line), L"%04d-%02d-%02d %02d:%02d:%02d\t%ls[%d]\t%ls\r\n",
 		time.wYear, time.wMonth, time.wDay,
 		time.wHour, time.wMinute, time.wSecond,
 		L"" LOG_NAME, GetCurrentProcessId(),
 		text);
+	int length = lstrlen(line);
 
 	DWORD written = 0;
 	WriteFile(g_hLogFile, line, length * sizeof(WCHAR), &written, NULL);
