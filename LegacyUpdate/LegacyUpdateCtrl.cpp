@@ -183,6 +183,8 @@ STDMETHODIMP CLegacyUpdateCtrl::IsPermitted(void) {
 		}
 	}
 
+	hr = E_ACCESSDENIED;
+
 end:
 	if (host) {
 		SysFreeString(host);
