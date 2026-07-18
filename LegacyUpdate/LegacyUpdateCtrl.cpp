@@ -154,6 +154,7 @@ STDMETHODIMP CLegacyUpdateCtrl::GetHTMLDocument(IHTMLDocument2 **retval) {
 STDMETHODIMP CLegacyUpdateCtrl::IsPermitted(void) {
 	CComPtr<IHTMLDocument2> document;
 	CComPtr<IHTMLLocation> location;
+	BSTR protocol = NULL;
 	BSTR host = NULL;
 	HRESULT hr = GetHTMLDocument(&document);
 	if (!SUCCEEDED(hr)) {
@@ -169,6 +170,13 @@ STDMETHODIMP CLegacyUpdateCtrl::IsPermitted(void) {
 	hr = document->get_location(&location);
 	CHECK_HR_OR_GOTO_END(L"get_location");
 	if (location == NULL) {
+		hr = E_ACCESSDENIED;
+		goto end;
+	}
+
+	hr = location->get_protocol(&protocol);
+	CHECK_HR_OR_GOTO_END(L"get_protocol");
+	if (wcscmp(protocol, L"http:") != 0 && wcscmp(protocol, L"https:") != 0) {
 		hr = E_ACCESSDENIED;
 		goto end;
 	}
