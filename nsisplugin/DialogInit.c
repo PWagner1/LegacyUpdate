@@ -5,6 +5,7 @@
 
 #include <windows.h>
 #include <nsis/pluginapi.h>
+#include "LoadSystemLibrary.h"
 #include <shlwapi.h>
 #include <uxtheme.h>
 #include <vsstyle.h>
@@ -397,7 +398,7 @@ PLUGIN_METHOD(DialogInit) {
 	extra->RegisterPluginCallback(g_hInstance, NSISPluginCallback);
 
 	// Get symbols
-	HMODULE dwmapi = LoadLibrary(L"dwmapi.dll");
+	HMODULE dwmapi = LoadSystemLibrary(L"dwmapi.dll");
 	if (dwmapi) {
 		$DwmExtendFrameIntoClientArea = (_DwmExtendFrameIntoClientArea)GetProcAddress(dwmapi, "DwmExtendFrameIntoClientArea");
 		$DwmIsCompositionEnabled = (_DwmIsCompositionEnabled)GetProcAddress(dwmapi, "DwmIsCompositionEnabled");
@@ -405,7 +406,7 @@ PLUGIN_METHOD(DialogInit) {
 		$DwmSetWindowAttribute = (_DwmSetWindowAttribute)GetProcAddress(dwmapi, "DwmSetWindowAttribute");
 	}
 
-	HMODULE uxtheme = LoadLibrary(L"uxtheme.dll");
+	HMODULE uxtheme = LoadSystemLibrary(L"uxtheme.dll");
 	if (uxtheme) {
 		$SetWindowThemeAttribute = (_SetWindowThemeAttribute)GetProcAddress(uxtheme, "SetWindowThemeAttribute");
 		$IsThemeActive = (_IsThemeActive)GetProcAddress(uxtheme, "IsThemeActive");

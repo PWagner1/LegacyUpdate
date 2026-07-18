@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "main.h"
+#include "LoadSystemLibrary.h"
 #include "resource.h"
 
 #undef _WIN32_WINNT
@@ -14,7 +15,7 @@ static _TaskDialogIndirect $TaskDialogIndirect;
 int MsgBox(HWND hwnd, LPCTSTR instruction, LPCTSTR body, UINT type) {
 	if (!_loadedTaskDialog) {
 		_loadedTaskDialog = TRUE;
-		$TaskDialogIndirect = (_TaskDialogIndirect)GetProcAddress(LoadLibrary(L"comctl32.dll"), "TaskDialogIndirect");
+		$TaskDialogIndirect = (_TaskDialogIndirect)GetProcAddress(LoadSystemLibrary(L"comctl32.dll"), "TaskDialogIndirect");
 	}
 
 	// Play the sound matching the icon, because MB_USERICON doesn't play a sound

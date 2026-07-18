@@ -1,5 +1,6 @@
 #include <comdef.h>
 #include <shlwapi.h>
+#include "LoadSystemLibrary.h"
 #include "Registry.h"
 #include "VersionInfo.h"
 #include "WMI.h"
@@ -184,7 +185,7 @@ HRESULT GetOSProductName(LPVARIANT productName) {
 		// Handle the absolute disaster of Windows XP/Server 2003 edition branding
 		WORD winver = GetWinVer();
 		if (HIBYTE(winver) == 5 && LOBYTE(winver) != 0) {
-			_IsOS $IsOS = (_IsOS)GetProcAddress(LoadLibrary(L"shlwapi.dll"), MAKEINTRESOURCEA(437));
+			_IsOS $IsOS = (_IsOS)GetProcAddress(LoadSystemLibrary(L"shlwapi.dll"), MAKEINTRESOURCEA(437));
 			if (!$IsOS) {
 				return E_FAIL;
 			}

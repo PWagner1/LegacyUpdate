@@ -22,8 +22,7 @@ static inline void HardenDllSearchPaths(void) {
 	StringCchPrintf(path, ARRAYSIZE(path), L"%ls;%ls", sysdir, windir);
 	SetEnvironmentVariable(L"PATH", path);
 
-	StringCchCat(sysdir, ARRAYSIZE(sysdir), L"\\kernel32.dll");
-	HMODULE kernel32 = GetModuleHandle(windir);
+	HMODULE kernel32 = GetModuleHandle(L"kernel32.dll");
 	if (!kernel32) {
 		return;
 	}

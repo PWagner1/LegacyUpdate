@@ -2,6 +2,7 @@
 #include <commctrl.h>
 #include "HResult.h"
 #include "LoadImage.h"
+#include "LoadSystemLibrary.h"
 #include "MsgBox.h"
 #include "Registry.h"
 #include "VersionInfo.h"
@@ -25,9 +26,9 @@ static void StartThemes(void) {
 	// session for the SYSTEM desktop, so we need to ask it to. This matches what msoobe.exe does on first boot.
 
 	// Windows 7 moves this to UxInit.dll
-	HMODULE shsvcs = LoadLibrary(L"UxInit.dll");
+	HMODULE shsvcs = LoadSystemLibrary(L"UxInit.dll");
 	if (!shsvcs) {
-		shsvcs = LoadLibrary(L"shsvcs.dll");
+		shsvcs = LoadSystemLibrary(L"shsvcs.dll");
 		if (!shsvcs) {
 			return;
 		}

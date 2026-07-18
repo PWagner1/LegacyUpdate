@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <nsis/pluginapi.h>
 #include "main.h"
+#include "LoadSystemLibrary.h"
 #include "VersionInfo.h"
 #include "Wow64.h"
 #include "licdll.h"
@@ -36,7 +37,7 @@ PLUGIN_METHOD(IsActivated) {
 	if (AtLeastWinVista()) {
 		// Vista+: Ask the Software Licensing Service
 		if (!$SLOpen) {
-			HMODULE slc = LoadLibrary(L"slc.dll");
+			HMODULE slc = LoadSystemLibrary(L"slc.dll");
 			if (slc) {
 				$SLOpen = (_SLOpen)GetProcAddress(slc, "SLOpen");
 				$SLClose = (_SLClose)GetProcAddress(slc, "SLClose");

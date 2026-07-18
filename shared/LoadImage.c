@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <wincodec.h>
 #include <gdiplus.h>
+#include "LoadSystemLibrary.h"
 
 // Adapted from https://faithlife.codes/blog/2008/09/displaying_a_splash_screen_with_c_part_i/
 //  1. Get resource as an IStream
@@ -141,7 +142,7 @@ static HBITMAP GetHBitmapForWICBitmap(IWICBitmapSource *bitmap) {
 
 HBITMAP LoadPNGResource(HINSTANCE hInstance, LPCWSTR resourceName, LPCWSTR resourceType) {
 	if (!$WICConvertBitmapSource) {
-		HMODULE windowscodecs = LoadLibrary(L"windowscodecs.dll");
+		HMODULE windowscodecs = LoadSystemLibrary(L"windowscodecs.dll");
 		if (windowscodecs) {
 			$WICConvertBitmapSource = (_WICConvertBitmapSource)GetProcAddress(windowscodecs, "WICConvertBitmapSource");
 		}
@@ -174,7 +175,7 @@ HBITMAP LoadPNGResource(HINSTANCE hInstance, LPCWSTR resourceName, LPCWSTR resou
 
 HBITMAP LoadJPEGFile(LPCWSTR filePath) {
 	if (!$WICConvertBitmapSource) {
-		HMODULE windowscodecs = LoadLibrary(L"windowscodecs.dll");
+		HMODULE windowscodecs = LoadSystemLibrary(L"windowscodecs.dll");
 		if (windowscodecs) {
 			$WICConvertBitmapSource = (_WICConvertBitmapSource)GetProcAddress(windowscodecs, "WICConvertBitmapSource");
 		}
@@ -184,7 +185,7 @@ HBITMAP LoadJPEGFile(LPCWSTR filePath) {
 	}
 
 	if (!$SHCreateStreamOnFileEx) {
-		HMODULE shlwapi = LoadLibrary(L"shlwapi.dll");
+		HMODULE shlwapi = LoadSystemLibrary(L"shlwapi.dll");
 		if (shlwapi) {
 			$SHCreateStreamOnFileEx = (_SHCreateStreamOnFileEx)GetProcAddress(shlwapi, "SHCreateStreamOnFileEx");
 		}

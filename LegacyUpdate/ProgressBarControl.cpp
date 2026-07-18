@@ -5,6 +5,7 @@
 #include <commctrl.h>
 #include <new>
 #include "Compat.h"
+#include "LoadSystemLibrary.h"
 #include "Registry.h"
 #include "resource.h"
 #include "VersionInfo.h"
@@ -242,7 +243,7 @@ STDMETHODIMP CProgressBarControl::CreateControlWindow(HWND hParent, const RECT *
 	IsolationAwareStart(&cookie);
 
 	// Load and init comctl (hopefully 6.0)
-	LoadLibrary(L"comctl32.dll");
+	LoadSystemLibrary(L"comctl32.dll");
 
 	INITCOMMONCONTROLSEX initComctl = {0};
 	initComctl.dwSize = sizeof(initComctl);
