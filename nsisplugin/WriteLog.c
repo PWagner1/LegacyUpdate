@@ -28,7 +28,7 @@ PLUGIN_METHOD(InitLog) {
 
 		if (listView) {
 			g_hwndLogList = listView;
-			g_pfnListViewProc = (WNDPROC)SetWindowLong(g_hwndLogList, GWL_WNDPROC, (LONG_PTR)LogListViewProc);
+			g_pfnListViewProc = (WNDPROC)SetWindowLongPtr(g_hwndLogList, GWLP_WNDPROC, (LONG_PTR)LogListViewProc);
 		}
 	}
 }
