@@ -50,7 +50,7 @@ jobs:
       run: |
         curl -fsSL https://linuxfromscratch.org/~renodr/nsis-3.12-v2.tar.xz -o /tmp/nsis-3.12-v2.tar.xz
         sudo tar -xf /tmp/nsis-3.12-v2.tar.xz -C /opt
-        rm /tmp/nsis-3.12.tar.xz
+        rm /tmp/nsis-3.12-v2.tar.xz
 
     - name: Patches cache
       id: patches-cache
