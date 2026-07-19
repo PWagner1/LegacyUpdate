@@ -111,7 +111,7 @@ library LegacyUpdateLib {
 	importlib("stdole2.tlb");
 
 	[
-		uuid(AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F),
+		uuid(AD40983C-FB56-4AAC-BEDB-C407C353E2CB),
 		control,
 		helpstring("LegacyUpdateCtrl Class")
 	]

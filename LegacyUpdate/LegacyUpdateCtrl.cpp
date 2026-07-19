@@ -25,6 +25,8 @@ const WCHAR *permittedHosts[] = {
 	L"test.legacyupdate.net"
 };
 
+#define COMPAT_EVIL_DONT_LOAD 0x00000400
+
 #define LEGACYUPDATECTRL_MISCSTATUS (OLEMISC_RECOMPOSEONRESIZE | OLEMISC_CANTLINKINSIDE | OLEMISC_INSIDEOUT | OLEMISC_ACTIVATEWHENVISIBLE | OLEMISC_SETCLIENTSITEFIRST)
 
 DEFINE_UUIDOF(CLegacyUpdateCtrl, CLSID_LegacyUpdateCtrl);
@@ -84,8 +86,13 @@ STDMETHODIMP CLegacyUpdateCtrl::UpdateRegistry(BOOL bRegister) {
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\TypeLib", NULL, REG_SZ, (LPVOID)L"%LIBID%"},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\Version", NULL, REG_SZ, (LPVOID)L"1.0"},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\MiscStatus", NULL, REG_DWORD, (LPVOID)LEGACYUPDATECTRL_MISCSTATUS},
-			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\Implemented Categories\\{7DD95801-9882-11CF-9FA9-00AA006C42C4}", NULL, REG_SZ, NULL},
-			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\Implemented Categories\\{7DD95802-9882-11CF-9FA9-00AA006C42C4}", NULL, REG_SZ, NULL},
+			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\Implemented Categories\\{7DD95801-9882-11CF-9FA9-00AA006C42C4}", NULL, REG_SZ, NULL}, // CATID_SafeForScripting
+			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\Implemented Categories\\{7DD95802-9882-11CF-9FA9-00AA006C42C4}", NULL, REG_SZ, NULL}, // CATID_SafeForInitializing
+			// Killbits for vulnerable GUID, redirecting to the non-vulnerable CLSID. Intentionally not removed on unregister.
+			{HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Internet Explorer\\ActiveX Compatibility\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", L"Compatibility Flags", REG_DWORD, (LPVOID)COMPAT_EVIL_DONT_LOAD},
+			{HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Internet Explorer\\ActiveX Compatibility\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", L"AlternateCLSID", REG_SZ, (LPVOID)L"%CLSID%"},
+			// Remove old CLSID
+			{HKEY_CLASSES_ROOT, L"CLSID\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", NULL, 0, DELETE_KEY},
 			{}
 		};
 		return SetRegistryEntries(entries);
