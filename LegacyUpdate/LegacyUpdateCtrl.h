@@ -5,6 +5,7 @@
 // CLegacyUpdateCtrl : See LegacyUpdateCtrl.cpp for implementation.
 
 #include <mshtml.h>
+#include <objsafe.h>
 #include <wuapi.h>
 #include "resource.h"
 #include "com.h"
@@ -19,12 +20,24 @@ public:
 		IOleObjectImpl<CLegacyUpdateCtrl>(pParent) {}
 };
 
+class DECLSPEC_NOVTABLE CLegacyUpdateCtrl_IObjectSafety :
+	public ComClass<CLegacyUpdateCtrl, IObjectSafety> {
+public:
+	CLegacyUpdateCtrl_IObjectSafety(CLegacyUpdateCtrl *pParent) :
+		ComClass<CLegacyUpdateCtrl, IObjectSafety>(pParent) {}
+
+	STDMETHODIMP GetInterfaceSafetyOptions(REFIID riid, DWORD *pdwSupportedOptions, DWORD *pdwEnabledOptions);
+	STDMETHODIMP SetInterfaceSafetyOptions(REFIID riid, DWORD dwOptionSetMask, DWORD dwEnabledOptions);
+};
+
 class DECLSPEC_NOVTABLE CLegacyUpdateCtrl :
 	public IDispatchImpl<ILegacyUpdateCtrl, &LIBID_LegacyUpdateLib> {
 public:
 	CLegacyUpdateCtrl() :
 		m_IOleObject(this),
+		m_IObjectSafety(this),
 		m_refCount(1),
+		m_safetyOptions(0),
 		m_clientSite(NULL),
 		m_adviseSink(NULL),
 		m_elevatedHelper(NULL),
@@ -35,9 +48,13 @@ public:
 	static STDMETHODIMP Create(IUnknown *pUnkOuter, REFIID riid, void **ppv);
 	static STDMETHODIMP UpdateRegistry(BOOL bRegister);
 
+	friend class CLegacyUpdateCtrl_IObjectSafety;
+
 private:
 	CLegacyUpdateCtrl_IOleObject m_IOleObject;
+	CLegacyUpdateCtrl_IObjectSafety m_IObjectSafety;
 	LONG m_refCount;
+	DWORD m_safetyOptions;
 
 public:
 	// IUnknown

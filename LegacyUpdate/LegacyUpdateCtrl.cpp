@@ -86,8 +86,6 @@ STDMETHODIMP CLegacyUpdateCtrl::UpdateRegistry(BOOL bRegister) {
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\TypeLib", NULL, REG_SZ, (LPVOID)L"%LIBID%"},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\Version", NULL, REG_SZ, (LPVOID)L"1.0"},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\MiscStatus", NULL, REG_DWORD, (LPVOID)LEGACYUPDATECTRL_MISCSTATUS},
-			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\Implemented Categories\\{7DD95801-9882-11CF-9FA9-00AA006C42C4}", NULL, REG_SZ, NULL}, // CATID_SafeForScripting
-			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\Implemented Categories\\{7DD95802-9882-11CF-9FA9-00AA006C42C4}", NULL, REG_SZ, NULL}, // CATID_SafeForInitializing
 			// Killbits for vulnerable GUID, redirecting to the non-vulnerable CLSID. Intentionally not removed on unregister.
 			{HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Internet Explorer\\ActiveX Compatibility\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", L"Compatibility Flags", REG_DWORD, (LPVOID)COMPAT_EVIL_DONT_LOAD},
 			{HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Internet Explorer\\ActiveX Compatibility\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", L"AlternateCLSID", REG_SZ, (LPVOID)L"%CLSID%"},
@@ -117,7 +115,11 @@ STDMETHODIMP CLegacyUpdateCtrl::QueryInterface(REFIID riid, void **ppvObject) {
 	*ppvObject = NULL;
 
 	if (IsEqualIID(riid, IID_IOleObject)) {
-		*ppvObject = &m_IOleObject;
+		*ppvObject = (IOleObject *)&m_IOleObject;
+		AddRef();
+		return S_OK;
+	} else if (IsEqualIID(riid, IID_IObjectSafety)) {
+		*ppvObject = (IObjectSafety *)&m_IObjectSafety;
 		AddRef();
 		return S_OK;
 	}
@@ -137,6 +139,32 @@ STDMETHODIMP_(ULONG) CLegacyUpdateCtrl::Release(void) {
 		CoTaskMemFree(this);
 	}
 	return count;
+}
+
+#pragma mark - IObjectSafety
+
+#define LEGACYUPDATECTRL_SUPPORTED_SAFETY_OPTIONS (INTERFACESAFE_FOR_UNTRUSTED_CALLER | INTERFACESAFE_FOR_UNTRUSTED_DATA)
+
+STDMETHODIMP CLegacyUpdateCtrl_IObjectSafety::GetInterfaceSafetyOptions(REFIID riid, DWORD *pdwSupportedOptions, DWORD *pdwEnabledOptions) {
+	if (pdwSupportedOptions == NULL || pdwEnabledOptions == NULL) {
+		return E_POINTER;
+	}
+
+	*pdwSupportedOptions = LEGACYUPDATECTRL_SUPPORTED_SAFETY_OPTIONS;
+	*pdwEnabledOptions = m_pParent->m_safetyOptions;
+	return S_OK;
+}
+
+STDMETHODIMP CLegacyUpdateCtrl_IObjectSafety::SetInterfaceSafetyOptions(REFIID riid, DWORD dwOptionSetMask, DWORD dwEnabledOptions) {
+	if (dwOptionSetMask & ~LEGACYUPDATECTRL_SUPPORTED_SAFETY_OPTIONS) {
+		return E_FAIL;
+	}
+
+	HRESULT hr = m_pParent->IsPermitted();
+	CHECK_HR_OR_RETURN(L"IsPermitted");
+
+	m_pParent->m_safetyOptions = (dwEnabledOptions & dwOptionSetMask) | (m_pParent->m_safetyOptions & ~dwOptionSetMask);
+	return S_OK;
 }
 
 #pragma mark - ILegacyUpdateCtrl
@@ -193,14 +221,17 @@ STDMETHODIMP CLegacyUpdateCtrl::IsPermitted(void) {
 
 	for (DWORD i = 0; i < ARRAYSIZE(permittedHosts); i++) {
 		if (wcscmp(host, permittedHosts[i]) == 0) {
-			SysFreeString(host);
-			return S_OK;
+			hr = S_OK;
+			goto end;
 		}
 	}
 
 	hr = E_ACCESSDENIED;
 
 end:
+	if (protocol) {
+		SysFreeString(protocol);
+	}
 	if (host) {
 		SysFreeString(host);
 	}
@@ -274,26 +305,16 @@ STDMETHODIMP CLegacyUpdateCtrl::GetElevatedHelper(IElevationHelper **retval) {
 	return S_OK;
 }
 
-#define DoIsPermittedCheck(void) { \
-		HRESULT hr = IsPermitted(); \
-		if (!SUCCEEDED(hr)) { \
-			return hr; \
-		} \
-	}
-
 STDMETHODIMP CLegacyUpdateCtrl::CheckControl(VARIANT_BOOL *retval) {
 	if (retval == NULL) {
 		return E_POINTER;
 	}
 
-	DoIsPermittedCheck();
 	*retval = VARIANT_TRUE;
 	return S_OK;
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::MessageForHresult(LONG inHresult, BSTR *retval) {
-	DoIsPermittedCheck();
-
 	if (retval == NULL) {
 		return E_POINTER;
 	}
@@ -305,8 +326,6 @@ STDMETHODIMP CLegacyUpdateCtrl::MessageForHresult(LONG inHresult, BSTR *retval) 
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::GetOSVersionInfo(OSVersionField osField, LONG systemMetric, VARIANT *retval) {
-	DoIsPermittedCheck();
-
 	if (retval == NULL) {
 		return E_POINTER;
 	}
@@ -408,8 +427,6 @@ STDMETHODIMP CLegacyUpdateCtrl::GetOSVersionInfo(OSVersionField osField, LONG sy
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::RequestElevation(void) {
-	DoIsPermittedCheck();
-
 	if (m_elevatedHelper != NULL || !AtLeastWinVista()) {
 		return S_OK;
 	}
@@ -423,8 +440,6 @@ STDMETHODIMP CLegacyUpdateCtrl::RequestElevation(void) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::CreateObject(BSTR progID, IDispatch **retval) {
-	DoIsPermittedCheck();
-
 	if (progID == NULL) {
 		return E_INVALIDARG;
 	}
@@ -444,8 +459,6 @@ STDMETHODIMP CLegacyUpdateCtrl::CreateObject(BSTR progID, IDispatch **retval) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::SetBrowserHwnd(IUpdateInstaller *installer) {
-	DoIsPermittedCheck();
-
 	if (installer == NULL) {
 		return E_INVALIDARG;
 	}
@@ -462,8 +475,6 @@ STDMETHODIMP CLegacyUpdateCtrl::SetBrowserHwnd(IUpdateInstaller *installer) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::GetUserType(UserType *retval) {
-	DoIsPermittedCheck();
-
 	if (retval == NULL) {
 		return E_POINTER;
 	}
@@ -483,8 +494,6 @@ STDMETHODIMP CLegacyUpdateCtrl::GetUserType(UserType *retval) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::get_IsRebootRequired(VARIANT_BOOL *retval) {
-	DoIsPermittedCheck();
-
 	if (retval == NULL) {
 		return E_POINTER;
 	}
@@ -511,8 +520,6 @@ STDMETHODIMP CLegacyUpdateCtrl::get_IsRebootRequired(VARIANT_BOOL *retval) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::get_IsWindowsUpdateDisabled(VARIANT_BOOL *retval) {
-	DoIsPermittedCheck();
-
 	if (retval == NULL) {
 		return E_POINTER;
 	}
@@ -538,8 +545,6 @@ STDMETHODIMP CLegacyUpdateCtrl::get_IsWindowsUpdateDisabled(VARIANT_BOOL *retval
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::RebootIfRequired(void) {
-	DoIsPermittedCheck();
-
 	VARIANT_BOOL isRebootRequired = VARIANT_FALSE;
 	HRESULT hr = get_IsRebootRequired(&isRebootRequired);
 	if (SUCCEEDED(hr) && isRebootRequired == VARIANT_TRUE) {
@@ -562,8 +567,6 @@ static LPCWSTR logTypeParams[] = {
 };
 
 STDMETHODIMP CLegacyUpdateCtrl::ViewLog(ViewLogType logType) {
-	DoIsPermittedCheck();
-
 	if (logType < 0 || logType >= ARRAYSIZE(logTypeParams)) {
 		return E_INVALIDARG;
 	}
@@ -583,8 +586,6 @@ STDMETHODIMP CLegacyUpdateCtrl::ViewWindowsUpdateLog(void) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::OpenWindowsUpdateSettings(void) {
-	DoIsPermittedCheck();
-
 	HRESULT hr = StartLauncher(L"/options", FALSE);
 	if (!SUCCEEDED(hr)) {
 		CHECK_HR(L"OpenWindowsUpdateSettings() failed, falling back");
@@ -603,8 +604,6 @@ STDMETHODIMP CLegacyUpdateCtrl::OpenWindowsUpdateSettings(void) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::get_IsUsingWsusServer(VARIANT_BOOL *retval) {
-	DoIsPermittedCheck();
-
 	if (retval == NULL) {
 		return E_POINTER;
 	}
@@ -616,8 +615,6 @@ STDMETHODIMP CLegacyUpdateCtrl::get_IsUsingWsusServer(VARIANT_BOOL *retval) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::get_WsusServerUrl(BSTR *retval) {
-	DoIsPermittedCheck();
-
 	if (retval == NULL) {
 		return E_POINTER;
 	}
@@ -633,8 +630,6 @@ STDMETHODIMP CLegacyUpdateCtrl::get_WsusServerUrl(BSTR *retval) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::get_WsusStatusServerUrl(BSTR *retval) {
-	DoIsPermittedCheck();
-
 	if (retval == NULL) {
 		return E_POINTER;
 	}
@@ -650,8 +645,6 @@ STDMETHODIMP CLegacyUpdateCtrl::get_WsusStatusServerUrl(BSTR *retval) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::BeforeUpdate(void) {
-	DoIsPermittedCheck();
-
 	IElevationHelper *elevatedHelper;
 	HRESULT hr = GetElevatedHelper(&elevatedHelper);
 	CHECK_HR_OR_RETURN(L"GetElevatedHelper");
@@ -687,8 +680,6 @@ STDMETHODIMP CLegacyUpdateCtrl::BeforeUpdate(void) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::AfterUpdate(void) {
-	DoIsPermittedCheck();
-
 	IElevationHelper *elevatedHelper;
 	HRESULT hr = GetElevatedHelper(&elevatedHelper);
 	CHECK_HR_OR_RETURN(L"GetElevatedHelper");
