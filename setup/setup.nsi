@@ -436,6 +436,16 @@ ${MementoSection} "$(^Name)" LEGACYUPDATE
 	${AndIf} ${IsServerOS}
 		LegacyUpdateNSIS::IsServerCore
 		Pop $0
+		${If} $0 == 1
+			; Check if the IE capability has been installed
+			ClearErrors
+			EnumRegKey $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Component Based Servicing\CapabilityIndex\Browser.InternetExplorer" 0
+			${If} ${Errors}
+				StrCpy $0 1
+			${Else}
+				StrCpy $0 0
+			${EndIf}
+		${EndIf}
 	${Else}
 		StrCpy $0 0
 	${EndIf}
