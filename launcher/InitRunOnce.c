@@ -326,8 +326,20 @@ void RunOnce(BOOL postInstall) {
 	// Construct path to LegacyUpdateSetup.exe
 	LPWSTR setupPath;
 	GetOwnFileName(&setupPath);
-	wcsrchr(setupPath, L'\\')[1] = L'\0';
-	StringCchCat(setupPath, MAX_PATH, L"LegacyUpdateSetup.exe");
+	LPWSTR lastSlash = wcsrchr(setupPath, L'\\');
+	if (!lastSlash) {
+		LocalFree(setupPath);
+		PostQuitMessage(1);
+		return;
+	}
+	lastSlash[1] = L'\0';
+
+	DWORD setupDirLength = lstrlen(setupPath);
+	DWORD setupPathLength = setupDirLength + 22;
+	LPWSTR newSetupPath = (LPWSTR)LocalAlloc(LPTR, setupPathLength * sizeof(WCHAR));
+	StringCchPrintf(newSetupPath, setupPathLength, L"%ls%ls", setupPath, L"LegacyUpdateSetup.exe");
+	LocalFree(setupPath);
+	setupPath = newSetupPath;
 
 	// Execute and wait for completion
 	STARTUPINFO startupInfo = {0};

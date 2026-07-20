@@ -37,7 +37,7 @@ static HRESULT RegisterDllExternal(LPWSTR path, BOOL state) {
 	WCHAR regsvr32[MAX_PATH];
 	ExpandEnvironmentStrings(L"%SystemRoot%\\System32\\regsvr32.exe", regsvr32, ARRAYSIZE(regsvr32));
 
-	int argsLen = lstrlen(path) + 6;
+	int argsLen = lstrlen(path) + 12;
 	LPWSTR args = (LPWSTR)LocalAlloc(LPTR, argsLen * sizeof(WCHAR));
 	StringCchPrintf(args, argsLen, L"/s %ls\"%ls\"", state ? L"" : L"/u ", path);
 
@@ -45,6 +45,7 @@ static HRESULT RegisterDllExternal(LPWSTR path, BOOL state) {
 	HRESULT hr = Exec(NULL, regsvr32, args, NULL, SW_HIDE, TRUE, &status);
 	if (!SUCCEEDED(hr)) {
 		hr = HRESULT_FROM_WIN32(GetLastError());
+		LocalFree(args);
 		return hr;
 	}
 
@@ -54,6 +55,7 @@ static HRESULT RegisterDllExternal(LPWSTR path, BOOL state) {
 		hr = Exec(NULL, regsvr32, args, NULL, SW_SHOWDEFAULT, TRUE, &status);
 	}
 
+	LocalFree(args);
 	return status == 0 ? S_OK : E_FAIL;
 }
 

@@ -101,8 +101,10 @@ void LaunchUpdateSite(int argc, LPWSTR *argv, int nCmdShow) {
 
 	// If running on 2k/XP, make sure we're elevated. If not, show Run As prompt.
 	if (!AtLeastWinVista() && !IsUserAdmin()) {
-		LPWSTR args = (LPWSTR)LocalAlloc(LPTR, 512 * sizeof(WCHAR));
-		StringCchPrintf(args, 512, L"/launch %ls", argc > 0 ? argv[0] : L"");
+		LPCWSTR flag = argc > 0 ? argv[0] : L"";
+		DWORD argsLen = lstrlen(flag) + 16;
+		LPWSTR args = (LPWSTR)LocalAlloc(LPTR, argsLen * sizeof(WCHAR));
+		StringCchPrintf(args, argsLen, L"/launch %ls", flag);
 		hr = SelfElevate(args, NULL);
 		LocalFree(args);
 
