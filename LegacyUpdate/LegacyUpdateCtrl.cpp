@@ -18,6 +18,7 @@
 #include <new>
 #include <oleidl.h>
 #include <shlobj.h>
+#include <urlmon.h>
 #include <wuapi.h>
 
 const WCHAR *permittedHosts[] = {
@@ -28,6 +29,7 @@ const WCHAR *permittedHosts[] = {
 #define COMPAT_EVIL_DONT_LOAD 0x00000400
 
 #define LEGACYUPDATECTRL_MISCSTATUS (OLEMISC_RECOMPOSEONRESIZE | OLEMISC_CANTLINKINSIDE | OLEMISC_INSIDEOUT | OLEMISC_ACTIVATEWHENVISIBLE | OLEMISC_SETCLIENTSITEFIRST)
+#define LEGACYUPDATECTRL_SUPPORTED_SAFETY_OPTIONS (INTERFACESAFE_FOR_UNTRUSTED_CALLER | INTERFACESAFE_FOR_UNTRUSTED_DATA)
 
 DEFINE_UUIDOF(CLegacyUpdateCtrl, CLSID_LegacyUpdateCtrl);
 
@@ -86,10 +88,11 @@ STDMETHODIMP CLegacyUpdateCtrl::UpdateRegistry(BOOL bRegister) {
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\TypeLib", NULL, REG_SZ, (LPVOID)L"%LIBID%"},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\Version", NULL, REG_SZ, (LPVOID)L"1.0"},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\MiscStatus", NULL, REG_DWORD, (LPVOID)LEGACYUPDATECTRL_MISCSTATUS},
-			// Killbits for vulnerable GUID, redirecting to the non-vulnerable CLSID. Intentionally not removed on unregister.
+			// Killbits for vulnerable GUID. Intentionally not removed on unregister.
 			{HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Internet Explorer\\ActiveX Compatibility\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", L"Compatibility Flags", REG_DWORD, (LPVOID)COMPAT_EVIL_DONT_LOAD},
+			// Redirect vulnerable CLSID to new one
 			{HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Internet Explorer\\ActiveX Compatibility\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", L"AlternateCLSID", REG_SZ, (LPVOID)L"%CLSID%"},
-			// Remove old CLSID
+			// Remove old CLSID if registered (e.g. on upgrade)
 			{HKEY_CLASSES_ROOT, L"CLSID\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", NULL, 0, DELETE_KEY},
 			{}
 		};
@@ -99,6 +102,7 @@ STDMETHODIMP CLegacyUpdateCtrl::UpdateRegistry(BOOL bRegister) {
 			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control", NULL, 0, DELETE_KEY},
 			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control.1", NULL, 0, DELETE_KEY},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%", NULL, 0, DELETE_KEY},
+			{HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Internet Explorer\\ActiveX Compatibility\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", L"AlternateCLSID", 0, DELETE_VALUE},
 			{}
 		};
 		return SetRegistryEntries(entries);
@@ -143,8 +147,6 @@ STDMETHODIMP_(ULONG) CLegacyUpdateCtrl::Release(void) {
 
 #pragma mark - IObjectSafety
 
-#define LEGACYUPDATECTRL_SUPPORTED_SAFETY_OPTIONS (INTERFACESAFE_FOR_UNTRUSTED_CALLER | INTERFACESAFE_FOR_UNTRUSTED_DATA)
-
 STDMETHODIMP CLegacyUpdateCtrl_IObjectSafety::GetInterfaceSafetyOptions(REFIID riid, DWORD *pdwSupportedOptions, DWORD *pdwEnabledOptions) {
 	if (pdwSupportedOptions == NULL || pdwEnabledOptions == NULL) {
 		return E_POINTER;
@@ -187,10 +189,15 @@ STDMETHODIMP CLegacyUpdateCtrl::GetHTMLDocument(IHTMLDocument2 **retval) {
 }
 
 STDMETHODIMP CLegacyUpdateCtrl::IsPermitted(void) {
+	// To be permitted, the control must be hosted from an IHTMLDocument2 client site. The document must be an allowed
+	// http: or https: host, and must be in the Trusted Sites zone.
 	CComPtr<IHTMLDocument2> document;
 	CComPtr<IHTMLLocation> location;
+	CComPtr<IInternetSecurityManager> securityManager;
+	BSTR url = NULL;
 	BSTR protocol = NULL;
 	BSTR host = NULL;
+	DWORD zone = 0;
 	HRESULT hr = GetHTMLDocument(&document);
 	if (!SUCCEEDED(hr)) {
 #ifdef _DEBUG
@@ -202,33 +209,64 @@ STDMETHODIMP CLegacyUpdateCtrl::IsPermitted(void) {
 #endif
 	}
 
+	// Check that the URL evaluates to be in the Trusted Sites zone
+	hr = document->get_URL(&url);
+	CHECK_HR_OR_GOTO_END(L"get_URL");
+	if (url == NULL) {
+		TRACE(L"Document has no URL");
+		hr = E_ACCESSDENIED;
+		goto end;
+	}
+
+	hr = CoCreateInstance(CLSID_InternetSecurityManager, NULL, CLSCTX_INPROC_SERVER, IID_IInternetSecurityManager, (void **)&securityManager);
+	CHECK_HR_OR_GOTO_END(L"CoCreateInstance IInternetSecurityManager");
+
+	hr = securityManager->MapUrlToZone(url, &zone, 0);
+	CHECK_HR_OR_GOTO_END(L"MapUrlToZone");
+
+	if (zone != URLZONE_TRUSTED) {
+		TRACE(L"Document URL is not in the Trusted Sites zone");
+		hr = E_ACCESSDENIED;
+		goto end;
+	}
+
 	hr = document->get_location(&location);
 	CHECK_HR_OR_GOTO_END(L"get_location");
 	if (location == NULL) {
+		TRACE(L"Document has no location");
 		hr = E_ACCESSDENIED;
 		goto end;
 	}
 
+	// Check protocol is http(s):
 	hr = location->get_protocol(&protocol);
 	CHECK_HR_OR_GOTO_END(L"get_protocol");
 	if (wcscmp(protocol, L"http:") != 0 && wcscmp(protocol, L"https:") != 0) {
+		TRACE(L"Document URL has invalid protocol");
 		hr = E_ACCESSDENIED;
 		goto end;
 	}
 
+	// Check host is in permitted list
 	hr = location->get_host(&host);
 	CHECK_HR_OR_GOTO_END(L"get_host");
 
+	hr = E_ACCESSDENIED;
 	for (DWORD i = 0; i < ARRAYSIZE(permittedHosts); i++) {
 		if (wcscmp(host, permittedHosts[i]) == 0) {
 			hr = S_OK;
-			goto end;
+			break;
 		}
 	}
 
-	hr = E_ACCESSDENIED;
+	if (!SUCCEEDED(hr)) {
+		TRACE(L"HTML document has invalid host");
+	}
 
 end:
+	if (url) {
+		SysFreeString(url);
+	}
 	if (protocol) {
 		SysFreeString(protocol);
 	}
