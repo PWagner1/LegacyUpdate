@@ -84,6 +84,11 @@ LangString MsgBoxPluginFailed ${LANG_ENGLISH} \
 	$\r$\n\
 	The file may be corrupt. Try downloading Legacy Update again."
 
+LangString MsgBoxCreateRunOnceFailed ${LANG_ENGLISH} \
+	'Setup failed to create its data directory.$\r$\n\
+	$\r$\n\
+	Try deleting "$0" and try again.'
+
 ; Install errors
 LangString MsgBoxCopyFailed ${LANG_ENGLISH} \
 	'Unable to write to "$0".$\r$\n\

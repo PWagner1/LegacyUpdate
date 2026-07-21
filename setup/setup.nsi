@@ -722,6 +722,16 @@ Function .onInit
 
 	SetOutPath $PLUGINSDIR
 	File Patches.ini
+
+	LegacyUpdateNSIS::CreateRestrictedDirectory "${RUNONCEDIR}"
+	Pop $0
+	${If} $0 != 0
+		SetErrorLevel $0
+		StrCpy $0 "${RUNONCEDIR}"
+		MessageBox MB_USERICON "$(MsgBoxCreateRunOnceFailed)"
+		Quit
+	${EndIf}
+
 	SetOutPath "${RUNONCEDIR}"
 
 	${If} ${IsWin2000}

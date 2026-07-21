@@ -104,7 +104,6 @@ Function PrepareRunOnce
 	!if ${NT4} == 0
 	${IfNot} ${IsRunOnce}
 		; Copy to runonce path to ensure installer is accessible by the temp user
-		CreateDirectory "${RUNONCEDIR}"
 		SetOutPath "${RUNONCEDIR}"
 		CopyFiles /SILENT "$EXEPATH" "${RUNONCEDIR}\LegacyUpdateSetup.exe"
 		Call CopyLauncher

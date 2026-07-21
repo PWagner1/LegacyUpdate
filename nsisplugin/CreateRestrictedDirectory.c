@@ -1,0 +1,35 @@
+#include <windows.h>
+#include <nsis/pluginapi.h>
+
+// Copied from nsis/Source/exehead/util.c
+
+const UINT32 g_restrictedACL[] = {
+  0x00340002, 0x00000002, // ACL (ACL_REVISION2, 2 ACEs)
+  0x00180300, // ACCESS_ALLOWED_ACE:ACE_HEADER (ACCESS_ALLOWED_ACE_TYPE, CONTAINER_INHERIT_ACE|OBJECT_INHERIT_ACE)
+  0x10000000, // ACCESS_ALLOWED_ACE:ACCESS_MASK: GENERIC_ALL
+  0x00000201, 0x05000000, 0x00000020, 0x00000220, // ACCESS_ALLOWED_ACE:SID (BUILTIN\Administrators) NOTE: Must be the first SID in the ACL
+  0x00140300, // ACCESS_ALLOWED_ACE:ACE_HEADER (ACCESS_ALLOWED_ACE_TYPE, CONTAINER_INHERIT_ACE|OBJECT_INHERIT_ACE)
+  0x001200c1, // ACCESS_ALLOWED_ACE:ACCESS_MASK: SYNCHRONIZE|READ_CONTROL|FILE_LIST_DIRECTORY|FILE_DELETE_CHILD|FILE_READ_ATTRIBUTES
+  0x00000101, 0x01000000, 0x00000000 // ACCESS_ALLOWED_ACE:SID (WORLD\Everyone)
+};
+
+PLUGIN_METHOD(CreateRestrictedDirectory) {
+	PLUGIN_INIT();
+
+	WCHAR path[NSIS_MAX_STRLEN];
+	popstringn(path, ARRAYSIZE(path));
+
+	PSID adminGroupSID = (PSID)&g_restrictedACL[4];
+	SECURITY_DESCRIPTOR sd = {1, 0, SE_DACL_PRESENT, adminGroupSID, adminGroupSID, NULL, (PACL)g_restrictedACL};
+	SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), &sd, FALSE};
+
+	if (!CreateDirectory(path, &sa)) {
+		DWORD error = GetLastError();
+		if (error != ERROR_ALREADY_EXISTS) {
+			pushint((int)error);
+			return;
+		}
+	}
+
+	pushint(0);
+}
