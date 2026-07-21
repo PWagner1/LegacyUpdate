@@ -78,43 +78,40 @@ Var /GLOBAL Download.Hash
 Var /GLOBAL Download.Verbose
 
 Function Download
-	${If} ${FileExists} "${RUNONCEDIR}\$Download.Filename"
-		StrCpy $0 "${RUNONCEDIR}\$Download.Filename"
-		Return
-	${EndIf}
-
-	${If} ${FileExists} "$EXEDIR\patches\$Download.Filename"
-		CopyFiles /SILENT "$EXEDIR\patches\$Download.Filename" "${RUNONCEDIR}\$Download.Filename"
-	${Else}
-		${If} $Download.Verbose == 1
-		${OrIf} ${IsVerbose}
-			${DetailPrint} "$(Downloading)$Download.Name..."
-		${EndIf}
-		${If} ${IsVerbose}
-			${VerbosePrint} "From: $Download.URL"
-			${VerbosePrint} "To: ${RUNONCEDIR}\$Download.Filename"
-		${EndIf}
-		!insertmacro DownloadRequest "$Download.URL" "${RUNONCEDIR}\$Download.Filename" ""
-		${If} $Download.Verbose == 1
-		${OrIf} ${IsVerbose}
-			Call DownloadWait
+	${IfNot} ${FileExists} "${RUNONCEDIR}\$Download.Filename"
+		${If} ${FileExists} "$EXEDIR\patches\$Download.Filename"
+			CopyFiles /SILENT "$EXEDIR\patches\$Download.Filename" "${RUNONCEDIR}\$Download.Filename"
 		${Else}
-			Call DownloadWaitSilent
-		${EndIf}
-		Pop $1
-		Pop $0
-		${If} $1 < 200
-		${OrIf} $1 >= 300
-			${If} $1 == ${ERROR_INTERNET_NAME_NOT_RESOLVED}
-				StrCpy $2 "$Download.Name"
-				MessageBox MB_USERICON "$(MsgBoxDownloadDNSError)" /SD IDOK
-			${ElseIf} $1 != ${ERROR_INTERNET_OPERATION_CANCELLED}
-				StrCpy $2 "$Download.Name"
-				MessageBox MB_USERICON "$(MsgBoxDownloadFailed)" /SD IDOK
+			${If} $Download.Verbose == 1
+			${OrIf} ${IsVerbose}
+				${DetailPrint} "$(Downloading)$Download.Name..."
 			${EndIf}
-			Delete /REBOOTOK "${RUNONCEDIR}\$Download.Filename"
-			SetErrorLevel 1
-			Abort
+			${If} ${IsVerbose}
+				${VerbosePrint} "From: $Download.URL"
+				${VerbosePrint} "To: ${RUNONCEDIR}\$Download.Filename"
+			${EndIf}
+			!insertmacro DownloadRequest "$Download.URL" "${RUNONCEDIR}\$Download.Filename" ""
+			${If} $Download.Verbose == 1
+			${OrIf} ${IsVerbose}
+				Call DownloadWait
+			${Else}
+				Call DownloadWaitSilent
+			${EndIf}
+			Pop $1
+			Pop $0
+			${If} $1 < 200
+			${OrIf} $1 >= 300
+				${If} $1 == ${ERROR_INTERNET_NAME_NOT_RESOLVED}
+					StrCpy $2 "$Download.Name"
+					MessageBox MB_USERICON "$(MsgBoxDownloadDNSError)" /SD IDOK
+				${ElseIf} $1 != ${ERROR_INTERNET_OPERATION_CANCELLED}
+					StrCpy $2 "$Download.Name"
+					MessageBox MB_USERICON "$(MsgBoxDownloadFailed)" /SD IDOK
+				${EndIf}
+				Delete /REBOOTOK "${RUNONCEDIR}\$Download.Filename"
+				SetErrorLevel 1
+				Abort
+			${EndIf}
 		${EndIf}
 	${EndIf}
 
