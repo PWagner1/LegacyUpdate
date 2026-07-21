@@ -74,12 +74,12 @@ STDMETHODIMP CLegacyUpdateCtrl::UpdateRegistry(BOOL bRegister) {
 	if (bRegister) {
 		RegistryEntry entries[] = {
 			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control", NULL, REG_SZ, (LPVOID)L"Legacy Update Control"},
-			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control\\CurVer", NULL, REG_SZ, (LPVOID)L"LegacyUpdate.Control.1"},
-			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control.1", NULL, REG_SZ, (LPVOID)L"Legacy Update Control"},
-			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control.1\\CLSID", NULL, REG_SZ, (LPVOID)L"%CLSID%"},
+			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control\\CurVer", NULL, REG_SZ, (LPVOID)L"LegacyUpdate.Control.2"},
+			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control.2", NULL, REG_SZ, (LPVOID)L"Legacy Update Control"},
+			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control.2\\CLSID", NULL, REG_SZ, (LPVOID)L"%CLSID%"},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%", NULL, REG_SZ, (LPVOID)L"Legacy Update Control"},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%", L"AppID", REG_SZ, (LPVOID)L"%APPID%"},
-			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\ProgID", NULL, REG_SZ, (LPVOID)L"LegacyUpdate.Control.1"},
+			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\ProgID", NULL, REG_SZ, (LPVOID)L"LegacyUpdate.Control.2"},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\VersionIndependentProgID", NULL, REG_SZ, (LPVOID)L"LegacyUpdate.Control"},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\Programmable", NULL, REG_SZ, NULL},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%\\InprocServer32", NULL, REG_SZ, (LPVOID)L"%MODULE%"},
@@ -92,7 +92,8 @@ STDMETHODIMP CLegacyUpdateCtrl::UpdateRegistry(BOOL bRegister) {
 			{HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Internet Explorer\\ActiveX Compatibility\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", L"Compatibility Flags", REG_DWORD, (LPVOID)COMPAT_EVIL_DONT_LOAD},
 			// Redirect vulnerable CLSID to new one
 			{HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Internet Explorer\\ActiveX Compatibility\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", L"AlternateCLSID", REG_SZ, (LPVOID)L"%CLSID%"},
-			// Remove old CLSID if registered (e.g. on upgrade)
+			// Unregister old control if needed (e.g. on upgrade)
+			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control.1", NULL, 0, DELETE_KEY},
 			{HKEY_CLASSES_ROOT, L"CLSID\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", NULL, 0, DELETE_KEY},
 			{}
 		};
@@ -101,7 +102,10 @@ STDMETHODIMP CLegacyUpdateCtrl::UpdateRegistry(BOOL bRegister) {
 		RegistryEntry entries[] = {
 			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control", NULL, 0, DELETE_KEY},
 			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control.1", NULL, 0, DELETE_KEY},
+			{HKEY_CLASSES_ROOT, L"LegacyUpdate.Control.2", NULL, 0, DELETE_KEY},
 			{HKEY_CLASSES_ROOT, L"CLSID\\%CLSID%", NULL, 0, DELETE_KEY},
+			{HKEY_CLASSES_ROOT, L"CLSID\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", NULL, 0, DELETE_KEY},
+			// Keep killbit, but remove dangling AlternateCLSID
 			{HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Internet Explorer\\ActiveX Compatibility\\{AD28E0DF-5F5A-40B5-9432-85EFD97D1F9F}", L"AlternateCLSID", 0, DELETE_VALUE},
 			{}
 		};
