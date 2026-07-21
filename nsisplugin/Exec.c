@@ -293,9 +293,7 @@ params:
     si.cb = sizeof(si);
     SECURITY_ATTRIBUTES sa = {0};
     sa.nLength = sizeof(sa);
-    SECURITY_DESCRIPTOR sd = {0};
     PROCESS_INFORMATION pi;
-    const BOOL isNT = sizeof(void*) > 4 || (GetVersion() < 0x80000000);
     HANDLE newstdout = 0, read_stdout = 0;
     HANDLE newstdin = 0, read_stdin = 0;
     int utfSource = sizeof(TCHAR) > 1 && !forceNarrowInput ? -1 : FALSE, utfOutput = sizeof(TCHAR) > 1;
@@ -326,11 +324,6 @@ params:
 
     sa.bInheritHandle = TRUE;
     sa.lpSecurityDescriptor = NULL;
-    if (isNT) {
-      InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
-      SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE);
-      sa.lpSecurityDescriptor = &sd;
-    }
 
     if (!CreatePipe(&read_stdout, &newstdout, &sa, 0)) {
       lstrcpy(szRet, _T("error"));
