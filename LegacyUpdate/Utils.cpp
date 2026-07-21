@@ -20,6 +20,11 @@ HRESULT StartLauncher(LPCWSTR params, BOOL wait) {
 	HRESULT hr = GetInstallPath(&path);
 	CHECK_HR_OR_RETURN(L"GetInstallPath");
 
+	if (lstrlen(path) + 17 >= MAX_PATH) {
+		LocalFree(path);
+		return HRESULT_FROM_WIN32(ERROR_FILENAME_EXCED_RANGE);
+	}
+
 	PathAppend(path, L"LegacyUpdate.exe");
 
 	DWORD code = 0;

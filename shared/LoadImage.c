@@ -130,7 +130,19 @@ static HBITMAP GetHBitmapForWICBitmap(IWICBitmapSource *bitmap) {
 		return NULL;
 	}
 
+	if (width > UINT_MAX / 4) {
+		// Image is too large
+		DeleteObject(hBitmap);
+		return NULL;
+	}
+
 	UINT stride = width * 4;
+	if (height > 0 && stride > UINT_MAX / height) {
+		// Image is too large
+		DeleteObject(hBitmap);
+		return NULL;
+	}
+
 	UINT imageSize = stride * height;
 	if (!SUCCEEDED(IWICBitmapSource_CopyPixels(bitmap, NULL, stride, imageSize, (BYTE*)imageBits))) {
 		DeleteObject(hBitmap);
@@ -266,7 +278,16 @@ BOOL ScaleAndWriteToBMP(HBITMAP hBitmap, DWORD width, DWORD height, LPCWSTR outp
 	bmih.biPlanes = 1;
 	bmih.biBitCount = bmp.bmBitsPixel;
 	bmih.biCompression = BI_RGB;
-	bmih.biSizeImage = ((width * bmp.bmBitsPixel + 31) / 32) * 4 * height;
+
+	ULONGLONG rowSize = ((ULONGLONG)width * bmp.bmBitsPixel + 31) / 32 * 4;
+	ULONGLONG imageSize64 = rowSize * height;
+	if (imageSize64 > UINT_MAX) {
+		// Image is too large
+		hr = E_OUTOFMEMORY;
+		goto end;
+	}
+
+	bmih.biSizeImage = (DWORD)imageSize64;
 
 	BITMAPFILEHEADER bmfh = {0};
 	bmfh.bfType = 0x4D42;

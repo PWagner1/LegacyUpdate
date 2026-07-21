@@ -6,6 +6,10 @@ static LPWSTR _installPath;
 
 EXTERN_C HRESULT GetInstallPath(LPWSTR *path) {
 	*path = (LPWSTR)LocalAlloc(LPTR, MAX_PATH * sizeof(WCHAR));
+	if (!*path) {
+		return E_OUTOFMEMORY;
+	}
+
 	HRESULT hr = S_OK;
 
 	if (!_installPath) {
