@@ -809,6 +809,7 @@ Function .onInit
 		${EndIf}
 
 		${IfNot} ${NeedsPatch} IE9
+		${OrIf} ${IsNativeIA64}
 			!insertmacro RemoveSection ${VISTAIE9}
 		${ElseIf} ${IsServerOS}
 			LegacyUpdateNSIS::IsServerCore
